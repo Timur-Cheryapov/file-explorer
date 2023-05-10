@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">File Explorer</string>
+    <string name="date_size">%1$s | %2$s</string>
+    <string name="ascend">Ascend</string>
+    <string name="descend">Descend</string>
+    <string name="sort_by">Sort by</string>
+    <string name="name">Name</string>
+    <string name="size">Size</string>
+    <string name="date">Date</string>
+    <string name="extension">Extension</string>
+    <string name="icon_description">Icon</string>
+    <string name="file_was_edited">File was edited</string>
+    <string name="share">Share</string>
+    <string name="loading_icon">Loading icon</string>
+</resources>
