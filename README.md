@@ -26,6 +26,7 @@ This project was made especially for VK, russian leading IT company.
 - Share files
 - Open files
 - See recent changes with the blue dot near the file icon
+- For better user experience, folders are **always** displayed first
 
 ## Built With
 
