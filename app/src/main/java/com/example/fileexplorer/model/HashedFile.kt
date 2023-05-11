@@ -7,5 +7,5 @@ import androidx.room.PrimaryKey
 @Entity
 data class HashedFile(
     @PrimaryKey val path: String,
-    val hash: Int
+    val hash: String
 )

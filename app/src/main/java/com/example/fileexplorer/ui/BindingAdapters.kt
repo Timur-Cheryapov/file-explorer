@@ -1,9 +1,10 @@
-package com.example.fileexplorer
+package com.example.fileexplorer.ui
 
 import android.view.View
 import android.widget.ImageView
 import androidx.databinding.BindingAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.example.fileexplorer.R
 import com.example.fileexplorer.model.ApiStatus
 import com.example.fileexplorer.model.FOLDER_TYPE
 import com.example.fileexplorer.model.LightFile

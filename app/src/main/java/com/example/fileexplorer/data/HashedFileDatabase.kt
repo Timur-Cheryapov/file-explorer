@@ -8,7 +8,7 @@ import com.example.fileexplorer.model.HashedFile
 
 
 // Database for files with hash value
-@Database(entities = [HashedFile::class], version = 1, exportSchema = false)
+@Database(entities = [HashedFile::class], version = 2, exportSchema = false)
 abstract class HashedFileDatabase : RoomDatabase() {
 
     abstract fun hashedFileDao(): HashedFileDao

@@ -6,6 +6,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.fileexplorer.HashUtils
 import com.example.fileexplorer.data.HashedFileDao
 import com.example.fileexplorer.model.ASCEND_ORDER
 import com.example.fileexplorer.model.ApiStatus
@@ -52,6 +53,8 @@ class FileViewModel(
     private var _status = MutableLiveData<ApiStatus>()
     val status: LiveData<ApiStatus> = _status
 
+    private val MAX_FILE_SIZE = 2.0.pow(30).toLong()
+
     // Initialise all data from the start
     init {
         initialise(shouldUpdateDatabase = true)
@@ -87,9 +90,7 @@ class FileViewModel(
         // Temporary light file
         var lightFile: LightFile
         // Hash of file
-        var hash = 0
-        // Bytes from file
-        var bytes: ByteArray
+        var hash = ""
         // Get files from directory
         try {
             files =
@@ -154,9 +155,8 @@ class FileViewModel(
                 // Handle the case if it is the folder
                 if (lightFile.extension != FOLDER_TYPE) {
                     // If it is very big (>1GB), don't count the hash
-                    if (lightFile.size < 2.0.pow(30).toLong()) {
-                        bytes = it.readBytes()
-                        hash = bytes.contentHashCode()
+                    if (lightFile.size < MAX_FILE_SIZE) {
+                        hash = HashUtils.getHashFromFile(it)
                         Log.d("Files", "HashCode: $hash")
 
                         // Check hash from database
@@ -247,7 +247,7 @@ class FileViewModel(
     }
 
     // Make file with hash
-    private fun makeHashedFile(path: String, hash: Int): HashedFile {
+    private fun makeHashedFile(path: String, hash: String): HashedFile {
         return HashedFile(
             path = path,
             hash = hash
@@ -260,7 +260,7 @@ class FileViewModel(
     }
 
     // Check if hash was changed
-    private fun isNewHash(path: String, newHash: Int): Boolean {
+    private fun isNewHash(path: String, newHash: String): Boolean {
         val hashedFile: HashedFile? = runBlocking { hashedFileDao.getHashedFile(path) }
         if (hashedFile != null) return hashedFile.hash != newHash
         else return false
