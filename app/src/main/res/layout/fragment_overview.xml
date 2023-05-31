@@ -30,16 +30,33 @@
 
         <!-- Loading image -->
         <ImageView
+            android:id="@+id/loading_image"
             android:layout_width="160dp"
             android:layout_height="160dp"
+            android:contentDescription="@string/loading_icon"
             android:src="@drawable/loading_icon_animated"
             android:visibility="gone"
             app:ApiStatus="@{viewModel.status}"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            android:contentDescription="@string/loading_icon" />
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Empty directory -->
+        <TextView
+            android:id="@+id/empty_directory_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/empty_folder"
+            android:textAlignment="center"
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            android:visibility="visible"
+            app:EmptyDirectory="@{viewModel.directoryEmpty}"
+            app:drawableTopCompat="@drawable/icons8_opened_folder"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

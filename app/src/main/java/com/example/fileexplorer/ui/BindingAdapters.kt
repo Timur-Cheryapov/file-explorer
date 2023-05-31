@@ -2,6 +2,7 @@ package com.example.fileexplorer.ui
 
 import android.view.View
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.databinding.BindingAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.fileexplorer.R
@@ -54,5 +55,14 @@ fun checkApiStatus(imageView: ImageView, status: ApiStatus?) {
     when (status!!) {
         ApiStatus.LOADING -> imageView.visibility = View.VISIBLE
         ApiStatus.DONE -> imageView.visibility = View.GONE
+    }
+}
+
+// For displaying empty directory view
+@BindingAdapter("EmptyDirectory")
+fun checkEmptyDirectory(textView: TextView, directoryEmpty: Boolean?) {
+    when (directoryEmpty!!) {
+        true -> textView.visibility = View.VISIBLE
+        false -> textView.visibility = View.GONE
     }
 }

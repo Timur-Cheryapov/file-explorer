@@ -20,6 +20,7 @@ import com.example.fileexplorer.model.LightFile
 import com.example.fileexplorer.model.SHORT_STRING
 import com.example.fileexplorer.model.START_DIRECTORY
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -45,6 +46,10 @@ class FileViewModel(
      */
     var pathStack = ArrayDeque<String>(listOf())
 
+    // Set of paths where the user was.
+    // In order not to calculate hash for same files after the start of the app
+    var pathSet: MutableSet<String> = mutableSetOf()
+
     // Values for determining the order to be shown
     var sortBy = DEFAULT_SORT
     var order = ASCEND_ORDER
@@ -53,7 +58,11 @@ class FileViewModel(
     private var _status = MutableLiveData<ApiStatus>()
     val status: LiveData<ApiStatus> = _status
 
-    private val MAX_FILE_SIZE = 2.0.pow(30).toLong()
+    // State if the folder is empty
+    private var _directoryEmpty = MutableLiveData<Boolean>()
+    val directoryEmpty: LiveData<Boolean> = _directoryEmpty
+
+    private val MAX_FILE_SIZE = 4*2.0.pow(30).toLong() // 4GB
 
     // Initialise all data from the start
     init {
@@ -83,14 +92,10 @@ class FileViewModel(
         shouldUpdateDatabase: Boolean = false,
     ) {
         _status.value = ApiStatus.LOADING
-        // Files fetched from the directory
         var files: MutableList<File> = mutableListOf()
-        // Future light files to be displayed
         var lightFiles: MutableList<LightFile> = mutableListOf()
-        // Temporary light file
         var lightFile: LightFile
-        // Hash of file
-        var hash = ""
+
         // Get files from directory
         try {
             files =
@@ -99,129 +104,33 @@ class FileViewModel(
             e.message?.let { Log.d("Files", it) }
         }
 
-        if (shouldUpdateDatabase) {
-            // Folders are always first.
-            // Order files based on chosen sortBy and order
-            if (order == DESCEND_ORDER) {
-                when (sortBy) {
-                    DataTypes.SIZE -> files.sortByDescending {
-                        if (it.isDirectory) Long.MAX_VALUE
-                        else it.length()
-                    }
-
-                    DataTypes.DATE -> files.sortByDescending {
-                        if (it.isDirectory) Long.MAX_VALUE
-                        else it.lastModified()
-                    }
-
-                    DataTypes.EXTENSION -> files.sortByDescending {
-                        if (it.isDirectory) LONG_STRING + it.name.lowercase()
-                        else it.extension.lowercase() + it.name.lowercase()
-                    }
-
-                    else -> files.sortByDescending {
-                        if (it.isDirectory) LONG_STRING + it.name.lowercase()
-                        else it.name.lowercase()
-                    }
+        if (files.isNotEmpty()) {
+            _directoryEmpty.value = false
+            if (shouldUpdateDatabase) {
+                // Iteration through each fetched file
+                files.forEach {
+                    lightFile = makeLightFile(it)
+                    Log.d("Files", "FileName: ${lightFile.name}")
+                    // Add light file to the future Live Data of all light files
+                    lightFiles.add(lightFile)
                 }
             } else {
-                when (sortBy) {
-                    DataTypes.SIZE -> files.sortBy {
-                        if (it.isDirectory) Long.MIN_VALUE
-                        else it.length()
-                    }
-
-                    DataTypes.DATE -> files.sortBy {
-                        if (it.isDirectory) Long.MIN_VALUE
-                        else it.lastModified()
-                    }
-
-                    DataTypes.EXTENSION -> files.sortBy {
-                        if (it.isDirectory) SHORT_STRING + it.name.lowercase()
-                        else it.extension.lowercase() + it.name.lowercase()
-                    }
-
-                    else -> files.sortBy {
-                        if (it.isDirectory) SHORT_STRING + it.name.lowercase()
-                        else it.name.lowercase()
-                    }
-                }
+                // Else just iterate through each file in all light files with new order
+                lightFiles = allLightFiles.value?.toMutableList() ?: mutableListOf()
             }
-            // Iteration through each fetched file
-            files.forEach {
-                lightFile = makeLightFile(it)
-                Log.d("Files", "FileName: ${lightFile.name}")
-
-                // Handle the case if it is the folder
-                if (lightFile.extension != FOLDER_TYPE) {
-                    // If it is very big (>1GB), don't count the hash
-                    if (lightFile.size < MAX_FILE_SIZE) {
-                        hash = HashUtils.getHashFromFile(it)
-                        Log.d("Files", "HashCode: $hash")
-
-                        // Check hash from database
-                        if (isNewHash(lightFile.path, hash)) {
-                            lightFile.wasEdited = true
-                            Log.d("Files", "${lightFile.name} hash was edited")
-                        }
-                    }
-                    // Upsert hashed file in database from this directory
-                    upsert(makeHashedFile(lightFile.path, hash))
-                }
-                // Add light file to the future Live Data of all light files
-                lightFiles.add(lightFile)
-            }
+            lightFiles = sortLightFiles(lightFiles).toMutableList()
         } else {
-            // Else just iterate through each file in all light files with new order
-            lightFiles = allLightFiles.value?.toMutableList() ?: mutableListOf()
-            if (order == DESCEND_ORDER) {
-                when (sortBy) {
-                    DataTypes.SIZE -> lightFiles.sortByDescending {
-                        if (it.extension == FOLDER_TYPE) Long.MAX_VALUE
-                        else it.size
-                    }
-
-                    DataTypes.DATE -> lightFiles.sortByDescending {
-                        if (it.extension == FOLDER_TYPE) Long.MAX_VALUE
-                        else it.date
-                    }
-
-                    DataTypes.EXTENSION -> lightFiles.sortByDescending {
-                        if (it.extension == FOLDER_TYPE) LONG_STRING + it.name.lowercase()
-                        else it.extension.lowercase() + it.name.lowercase()
-                    }
-
-                    else -> lightFiles.sortByDescending {
-                        if (it.extension == FOLDER_TYPE) LONG_STRING + it.name.lowercase()
-                        else it.name.lowercase()
-                    }
-                }
-            } else {
-                when (sortBy) {
-                    DataTypes.SIZE -> lightFiles.sortBy {
-                        if (it.extension == FOLDER_TYPE) Long.MIN_VALUE
-                        else it.size
-                    }
-
-                    DataTypes.DATE -> lightFiles.sortBy {
-                        if (it.extension == FOLDER_TYPE) Long.MIN_VALUE
-                        else it.date
-                    }
-
-                    DataTypes.EXTENSION -> lightFiles.sortBy {
-                        if (it.extension == FOLDER_TYPE) SHORT_STRING + it.name.lowercase()
-                        else it.extension.lowercase() + it.name.lowercase()
-                    }
-
-                    else -> lightFiles.sortBy {
-                        if (it.extension == FOLDER_TYPE) SHORT_STRING + it.name.lowercase()
-                        else it.name.lowercase()
-                    }
-                }
-            }
+            _directoryEmpty.value = true
         }
+
         _status.value = ApiStatus.DONE
         _allLightFiles.value = lightFiles
+
+        if (shouldUpdateDatabase) {
+            if (!pathSet.contains(directory)) {
+                updateHashesForLightFiles(lightFiles)
+            }
+        }
     }
 
     // Turn java file to light file
@@ -244,6 +153,89 @@ class FileViewModel(
             size = size,
             wasEdited = wasEdited
         )
+    }
+
+    // Sort the list of light files using given order and sort
+    private fun sortLightFiles(lightFiles: MutableList<LightFile>) : List<LightFile> {
+        // Folders are always first.
+        return if (order == DESCEND_ORDER) {
+            when (sortBy) {
+                DataTypes.SIZE -> lightFiles.sortedByDescending {
+                    if (it.extension == FOLDER_TYPE) Long.MAX_VALUE
+                    else it.size
+                }
+
+                DataTypes.DATE -> lightFiles.sortedByDescending {
+                    if (it.extension == FOLDER_TYPE) Long.MAX_VALUE
+                    else it.date
+                }
+
+                DataTypes.EXTENSION -> lightFiles.sortedByDescending {
+                    if (it.extension == FOLDER_TYPE) LONG_STRING + it.name.lowercase()
+                    else it.extension.lowercase() + it.name.lowercase()
+                }
+
+                else -> lightFiles.sortedByDescending {
+                    if (it.extension == FOLDER_TYPE) LONG_STRING + it.name.lowercase()
+                    else it.name.lowercase()
+                }
+            }
+        } else {
+            when (sortBy) {
+                DataTypes.SIZE -> lightFiles.sortedBy {
+                    if (it.extension == FOLDER_TYPE) Long.MIN_VALUE
+                    else it.size
+                }
+
+                DataTypes.DATE -> lightFiles.sortedBy {
+                    if (it.extension == FOLDER_TYPE) Long.MIN_VALUE
+                    else it.date
+                }
+
+                DataTypes.EXTENSION -> lightFiles.sortedBy {
+                    if (it.extension == FOLDER_TYPE) SHORT_STRING + it.name.lowercase()
+                    else it.extension.lowercase() + it.name.lowercase()
+                }
+
+                else -> lightFiles.sortedBy {
+                    if (it.extension == FOLDER_TYPE) SHORT_STRING + it.name.lowercase()
+                    else it.name.lowercase()
+                }
+            }
+        }
+    }
+
+    // Caller for handling background work calculating hashes
+    private fun updateHashesForLightFiles(lightFiles: MutableList<LightFile>) {
+        pathSet.add(directory)
+        viewModelScope.launch(Dispatchers.IO) { handleHash(lightFiles) }
+    }
+
+    // Caller for every file
+    private suspend fun handleHash(lightFiles: MutableList<LightFile>) = coroutineScope {
+        //var hash = ""
+        lightFiles.forEach {
+            launch {
+                if (it.extension != FOLDER_TYPE) {
+                    calculateHash(it)
+                }
+            }
+        }
+    }
+
+    // Actually calculates hash for file, updates it in database, changes wasEdited state
+    private fun calculateHash(lightFile: LightFile) {
+        // If it is very big, don't count the hash
+        val hash = //if (lightFile.size < MAX_FILE_SIZE)
+            HashUtils.getHashFromFile(File(lightFile.path)) //else ""
+        Log.d("Files", "Hash: $hash")
+
+        upsert(makeHashedFile(lightFile.path, hash))
+
+        if (isNewHash(lightFile.path, hash)) {
+            _allLightFiles.value?.find { target -> target.path == lightFile.path }?.wasEdited = true
+            Log.d("Files", "${lightFile.name} hash was edited")
+        }
     }
 
     // Make file with hash
