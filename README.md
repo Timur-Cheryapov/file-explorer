@@ -12,6 +12,7 @@
 
 
 ## About The Project
+[--> Get fresh APK file here <--](FileExplorer.apk)
 
 File explorer is an app that makes browsing and interaction with files easy!
 
