@@ -95,8 +95,10 @@ class FileViewModel(
         var lightFiles: MutableList<LightFile> = mutableListOf()
         var lightFile: LightFile
 
-        _allLightFiles.value = lightFiles
-        _status.value = ApiStatus.LOADING
+        if (shouldUpdateDatabase) {
+            _allLightFiles.value = lightFiles
+            _status.value = ApiStatus.LOADING
+        }
 
         // Get files from directory
         try {
@@ -117,16 +119,13 @@ class FileViewModel(
                     lightFiles.add(lightFile)
                 }
             } else {
-                // Else just iterate through each file in all light files with new order
                 lightFiles = allLightFiles.value?.toMutableList() ?: mutableListOf()
             }
             lightFiles = sortLightFiles(lightFiles).toMutableList()
         }
 
-        _status.value = ApiStatus.DONE
-        if (lightFiles.isNotEmpty()) {
-            _allLightFiles.value = lightFiles
-        }
+        if (shouldUpdateDatabase) _status.value = ApiStatus.DONE
+        _allLightFiles.value = lightFiles
 
         if (files.isEmpty()) {
             _directoryEmpty.value = true
