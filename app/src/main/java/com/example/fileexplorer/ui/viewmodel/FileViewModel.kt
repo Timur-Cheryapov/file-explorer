@@ -91,10 +91,12 @@ class FileViewModel(
         // If only order was changed or the whole directory
         shouldUpdateDatabase: Boolean = false,
     ) {
-        _status.value = ApiStatus.LOADING
         var files: MutableList<File> = mutableListOf()
         var lightFiles: MutableList<LightFile> = mutableListOf()
         var lightFile: LightFile
+
+        _allLightFiles.value = lightFiles
+        _status.value = ApiStatus.LOADING
 
         // Get files from directory
         try {
@@ -119,12 +121,16 @@ class FileViewModel(
                 lightFiles = allLightFiles.value?.toMutableList() ?: mutableListOf()
             }
             lightFiles = sortLightFiles(lightFiles).toMutableList()
-        } else {
-            _directoryEmpty.value = true
         }
 
         _status.value = ApiStatus.DONE
-        _allLightFiles.value = lightFiles
+        if (lightFiles.isNotEmpty()) {
+            _allLightFiles.value = lightFiles
+        }
+
+        if (files.isEmpty()) {
+            _directoryEmpty.value = true
+        }
 
         if (shouldUpdateDatabase) {
             if (!pathSet.contains(directory)) {

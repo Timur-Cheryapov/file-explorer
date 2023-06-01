@@ -50,7 +50,7 @@
             android:text="@string/empty_folder"
             android:textAlignment="center"
             android:textAppearance="@style/TextAppearance.AppCompat.Large"
-            android:visibility="visible"
+            android:visibility="gone"
             app:EmptyDirectory="@{viewModel.directoryEmpty}"
             app:drawableTopCompat="@drawable/icons8_opened_folder"
             app:layout_constraintBottom_toBottomOf="parent"
